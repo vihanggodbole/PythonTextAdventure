@@ -1,23 +1,137 @@
 import time
 
-## Usually, get_functions() are for debugging.
+rootnode = None
 
-################################################################################################
-# Character Creation
-################################################################################################
+class Node(object):
 
-class Player(object):
+    def __init__(self, name, description):
+        self.name = name
+        self.description = description
+        self.children= []
 
-    name = ""
-    abilities = {'rustic': 0, 'milquetoast': 1, 'charlie': 2, 'apex': 3}
+    def addChild(self, child):
+        self.children.append(child)
+        child.parent = self.name
+
+    def get_children(self): #lists immediate children
+        for c in self.children:
+            print(c.name)
+
+    def get_children_deep(self):
+
+        for c in self.children:
+            print(c.name)
+            if isinstance(c, Node):
+                c.get_children_deep()
+                
+class Leaf(object):
+
+    def __init__(self, name, description):
+        self.name = name
+        self.description = description
+
+    def get_name(self):
+        print(self.name)
+
+    def set_name(self, name):
+        self.name = name
+
+    def get_description(self):
+        print(self.description)
+
+    def set_description(self, description):
+        self.description = description
+
+def node_search(target, parent):
+                    
+    nodefound = False
+
+    for child in parent.children:
+        if child.name == target:
+            nodefound = True
+            return child
+
+    if nodefound is False:
+        print ("Sorry, no such item found.")
+
+def node_search_deep(target, parent):
+                    
+    nodefound = False
+                    
+    for child in parent.children:
+        if child.name == target:
+            nodefound = True
+            return child
+        elif isinstance(child, Node):
+            node_search_deep(target, child)
+                    
+    if nodefound is False:
+        print ("Sorry no such item found.")
+                    
+def node_move(target, destination):
+                    
+    if isinstance(destination, (Node, Creature)): ## Later add Container, Room, etc.
+        parentnode = target.parent
+        parentnode.children.remove(target)
+        destination.addChild(target)
+    else:
+        print("Sorry. The destination cannot contain anything.")
+        
+class Room(Node):
+
+    def __init__(self, name, description, exits):
+        Node.__init__(self, name, description)
+        self.exits = exits
+        self.get_name()
+
+    def get_name(self):
+        print("You are in the " + self.name)
+        print()
+
+    def set_description(self, description):
+        self.description = description
+        
+    def get_description(self):
+        print(self.description)
+        print()
+        
+    def show_exits(self): ## Debug
+        print(self.exits)
+
+    def add_exits(self, exitsAdded):
+        for char in exitsAdded:
+            if char not in self.exits:
+                self.exits += exitsAdded
+
+    def remove_exits(self, exitsRemoved):
+        for char in exitsRemove:
+            self.exits.replace(char, "")
+
+class Item(Leaf):
+    
+    def __init__(self, name, description):
+        Leaf.__init__(self, name description)
+
+class Creature(object):
+
+    def __init__(self, name, description, creature_type):
+        self.name = name
+        self.description = description
+        self.creature_type = creature_type
+        self.isAlive = True 
+
+
+class Player(Creature):
+
+    abilities = {'rustic': 0, 'soder': 1, 'bebop': 2, 'choral': 3}
     ability = 0
-    # lots of property ideas
-    description = ""
-    visibility = "visible"
 
+    visibility = "visible" #Yes, for stealth and such. Maybe change to an integer value of 0 - 100
 
-    def __init__(self):
-        print("Player created")
+    def __init__(self, name, description, creature_type):
+        Creature.__init__(self, name description, creature_type)
+        print("Debug: Player created")
+        print()
 
     def set_name(self, name):
         self.name = name
@@ -32,9 +146,6 @@ class Player(object):
     def get_ability(self):
         return self.ability
 
-   
-
-
 def calculate_ability(answer1, answer2):
     ## going to mix these up later
     if answer1 and answer2:
@@ -46,9 +157,9 @@ def calculate_ability(answer1, answer2):
     elif not answer1 and not answer2:
         return 'rustic'   
 
-################################################################################################
-# GameEvent and Event Classes
-################################################################################################
+
+# CLEAN THIS UP START#
+
 class GameEvent(object):
 
     event_type = ""
@@ -98,24 +209,44 @@ class SpeechEvent(GameEvent):
         self.sleep = sleep
 
 # bulk create SpeechEvents
-def bulk_speechEvent(speakerList, messageList, sleep = 0):
+# You can pass in empty lists for speaker_list and a single sleep value to sleep_list
+# and their lists will be created from the length of message_list
+def bulk_speech_event(speaker_list, message_list, wait_list):
 
-    listLen = len(speakerList)
+    new_speaker = []
+    new_wait = []
+
+    if type(speaker_list) is str:
+        for m in message_list:
+            new_speaker.append(speaker_list)
+    else:
+        new_speaker = speaker_list
+
+    if type(wait_list) is int or type(wait_list) is float:
+        for m in message_list:
+            new_wait.append(wait_list)
+    else:
+        new_wait = wait_list
     
-    for x in range(0, listLen):
-        current = SpeechEvent("SpeechEvent", speakerList[x], messageList[x])
-        current.pm()
-        time.sleep(sleep)
+    mlist_len = len(message_list)
+    
+    for x in range(0, mlist_len):
+        current = SpeechEvent(new_speaker[x], message_list[x])
+        current.gm()
+        time.sleep(new_wait[x])
+
+    print()
 
 # Wrapped check to see if player responded true or false
-def detect_bool(input_string):
-    if input_string == "true":
-        return True
-    elif input_string == "false":
-        return False
-    else:
-        return "repeat"
+def action_is_bool(input_string, desired_bool):
 
+    for db in desired_bool:
+        if input_string.lower() == db.lower():
+            return True
+            break
+        else:
+            return False
+            
 # Movement parsing
 
 def direction_check(exits, action):
@@ -144,80 +275,4 @@ def direction_check(exits, action):
     else: # Generic failure message
         print("You cannot go that way.")
 
-
-
-################################################################################################
-# Menus
-################################################################################################
-
-class Menu(object):
-
-    def __init__(self):
-        print("Menu object")
-
-################################################################################################
-# Rooms
-################################################################################################
-
-class Room(object):
-
-    name = ""
-    description = ""
-    exits = ""
-
-    descIndex = 0
-
-    def __init__(self, name, description, exits):
-        self.name = name
-        self.description = description
-        self.exits = exits
-        self.room_name()
-
-    def room_name(self):
-        print("You are in the " + self.name)
-        print()
-
-    def set_description(self, description):
-        self.description = description
-        
-    def get_description(self):
-        print(self.description)
-        print()
-        
-    def show_exits(self): ## Debug
-        print(self.exits)
-
-    def add_exits(self, exitsAdded):
-        for char in exitsAdded:
-            if char not in self.exits:
-                self.exits += exitsAdded
-
-    def remove_exits(self, exitsRemoved):
-        for char in exitsRemove:
-            self.exits.replace(char, "")
-
-################################################################################################
-# Items
-################################################################################################
-
-class Item(object):
-
-    name = ""
-    description = ""
-    
-    def __init__(self, descriptions):
-        print("In progress") 
-
-def game_loop():
-
-    ending = 0
-
-    game_start()
-
-    ## close the game here
-    while ending == 0:
-
-        action = input("> There's nothing past this point yet, close the game.")
-
-        if action.lower() == "endgame":
-            ending = 1
+# CLEAN THIS UP END #
